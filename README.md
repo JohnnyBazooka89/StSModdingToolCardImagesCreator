@@ -1,6 +1,6 @@
 # StSModdingToolCardImagesCreator
 
-This is the tool I created to help create images for [The Blackbeard Mod](https://github.com/JohnnyBazooka89/StSModTheBlackbeard). I hope it will be useful for other modders.
+This is the tool I created to help create images for [The Blackbeard Mod](https://github.com/JohnnyBazooka89/StSModTheBlackbeard). I hope it will be useful for other Modders.
 
 This tool takes 500x380 or 250x190 images and cuts them to fit into Slay the Spire cards. 
 
