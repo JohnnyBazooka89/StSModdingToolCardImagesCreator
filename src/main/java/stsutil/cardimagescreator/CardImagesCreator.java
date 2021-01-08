@@ -4,6 +4,8 @@ import org.apache.commons.io.FilenameUtils;
 
 import javax.imageio.ImageIO;
 import java.awt.*;
+import java.awt.geom.AffineTransform;
+import java.awt.image.AffineTransformOp;
 import java.awt.image.BufferedImage;
 import java.io.File;
 import java.io.IOException;
@@ -11,20 +13,18 @@ import java.nio.file.Files;
 
 public class CardImagesCreator {
 
-    public static final int DOUBLE_PORTRAIT_IMAGE_WIDTH = 1000;
-    public static final int DOUBLE_PORTRAIT_IMAGE_HEIGHT = 760;
     public static final int PORTRAIT_IMAGE_WIDTH = 500;
     public static final int PORTRAIT_IMAGE_HEIGHT = 380;
     public static final int IMAGE_WIDTH = 250;
     public static final int IMAGE_HEIGHT = 190;
 
-    private BufferedImage attackPortraitImageMask = ImageIO.read(new File("masks/AttackMask_p.png"));
-    private BufferedImage skillPortraitImageMask = ImageIO.read(new File("masks/SkillMask_p.png"));
-    private BufferedImage powerPortraitImageMask = ImageIO.read(new File("masks/PowerMask_p.png"));
-    private BufferedImage attackImageMask = ImageIO.read(new File("masks/AttackMask.png"));
-    private BufferedImage skillImageMask = ImageIO.read(new File("masks/SkillMask.png"));
-    private BufferedImage powerImageMask = ImageIO.read(new File("masks/PowerMask.png"));
-    private Color transparentColor = new Color(0, 0, 0, 0);
+    private final BufferedImage attackPortraitImageMask = ImageIO.read(new File("masks/AttackMask_p.png"));
+    private final BufferedImage skillPortraitImageMask = ImageIO.read(new File("masks/SkillMask_p.png"));
+    private final BufferedImage powerPortraitImageMask = ImageIO.read(new File("masks/PowerMask_p.png"));
+    private final BufferedImage attackImageMask = ImageIO.read(new File("masks/AttackMask.png"));
+    private final BufferedImage skillImageMask = ImageIO.read(new File("masks/SkillMask.png"));
+    private final BufferedImage powerImageMask = ImageIO.read(new File("masks/PowerMask.png"));
+    private static final Color TRANSPARENT_COLOR = new Color(0, 0, 0, 0);
 
     public CardImagesCreator() throws IOException {
     }
@@ -32,82 +32,66 @@ public class CardImagesCreator {
     public void createCardImages(File file) throws IOException {
 
         BufferedImage originalImage = ImageIO.read(file);
+        BufferedImage portraitImage = null;
+        BufferedImage cardImage = null;
 
-        boolean doublePortraitSize = false;
-        if (originalImage.getWidth() == DOUBLE_PORTRAIT_IMAGE_WIDTH && originalImage.getHeight() == DOUBLE_PORTRAIT_IMAGE_HEIGHT) {
-            doublePortraitSize = true;
-        }
-        
-        boolean portraitSize = false;
-        if ((originalImage.getWidth() == PORTRAIT_IMAGE_WIDTH && originalImage.getHeight() == PORTRAIT_IMAGE_HEIGHT)){
-            portraitSize = true;
-        }
-        boolean cardSize = false;
-        if ((originalImage.getWidth() == IMAGE_WIDTH && originalImage.getHeight() == IMAGE_HEIGHT)){
-            cardSize = true;
-        }
-        if(!doublePortraitSize && !portraitSize && !cardSize) {
-            throw new IllegalArgumentException("Image has incorrect size.");
+        if (getImageRatio(originalImage) != getImageRatio(attackImageMask)) {
+            throw new WrongRatioException("Image has wrong ratio, should be a multiple of 250x190");
         }
 
-        BufferedImage portraitImage;
-        BufferedImage cardImage;
-        if(doublePortraitSize) {
-            BufferedImage scaledImage = new BufferedImage(PORTRAIT_IMAGE_WIDTH, PORTRAIT_IMAGE_HEIGHT, BufferedImage.TYPE_INT_ARGB);
-            Graphics g = scaledImage.createGraphics();
-            g.drawImage(originalImage, 0, 0, PORTRAIT_IMAGE_WIDTH, PORTRAIT_IMAGE_HEIGHT, null);
-            g.dispose();
-            portraitImage = scaledImage;
-            
-            scaledImage = new BufferedImage(IMAGE_WIDTH, IMAGE_HEIGHT, BufferedImage.TYPE_INT_ARGB);
-            g = scaledImage.createGraphics();
-            g.drawImage(originalImage, 0, 0, IMAGE_WIDTH, IMAGE_HEIGHT, null);
-            g.dispose();
-            cardImage = scaledImage;
-        } else if(portraitSize) {
-            BufferedImage scaledImage = new BufferedImage(IMAGE_WIDTH, IMAGE_HEIGHT, BufferedImage.TYPE_INT_ARGB);
-            Graphics g = scaledImage.createGraphics();
-            g.drawImage(originalImage, 0, 0, IMAGE_WIDTH, IMAGE_HEIGHT, null);
-            g.dispose();
+        if (originalImage.getWidth() == PORTRAIT_IMAGE_WIDTH) {
             portraitImage = originalImage;
-            cardImage = scaledImage;
-        } else{
-            portraitImage = null;
+        }
+        if (originalImage.getWidth() == IMAGE_WIDTH) {
             cardImage = originalImage;
+        }
+        if (originalImage.getWidth() > PORTRAIT_IMAGE_WIDTH) {
+            portraitImage = scaleImageDownToDimensions(originalImage, PORTRAIT_IMAGE_WIDTH, PORTRAIT_IMAGE_HEIGHT);
+        }
+        if (originalImage.getWidth() > IMAGE_WIDTH) {
+            cardImage = scaleImageDownToDimensions(originalImage, IMAGE_WIDTH, IMAGE_HEIGHT);
         }
 
         if(portraitImage != null) {
-            BufferedImage attackPortraitImage = new BufferedImage(PORTRAIT_IMAGE_WIDTH, PORTRAIT_IMAGE_HEIGHT, BufferedImage.TYPE_INT_ARGB);
-            BufferedImage skillPortraitImage = new BufferedImage(PORTRAIT_IMAGE_WIDTH, PORTRAIT_IMAGE_HEIGHT, BufferedImage.TYPE_INT_ARGB);
-            BufferedImage powerPortraitImage = new BufferedImage(PORTRAIT_IMAGE_WIDTH, PORTRAIT_IMAGE_HEIGHT, BufferedImage.TYPE_INT_ARGB);
-            for (int i = 0; i < PORTRAIT_IMAGE_WIDTH; i++) {
-                for (int j = 0; j < PORTRAIT_IMAGE_HEIGHT; j++) {
-                    setPixelAsTransparentOrCopyFromOriginal(originalImage, attackPortraitImage, attackPortraitImageMask, i, j);
-                    setPixelAsTransparentOrCopyFromOriginal(originalImage, skillPortraitImage, skillPortraitImageMask, i, j);
-                    setPixelAsTransparentOrCopyFromOriginal(originalImage, powerPortraitImage, powerPortraitImageMask, i, j);
-                }
-            }
+            BufferedImage attackPortraitImage = maskImage(portraitImage, attackPortraitImageMask);
+            BufferedImage skillPortraitImage = maskImage(portraitImage, skillPortraitImageMask);
+            BufferedImage powerPortraitImage = maskImage(portraitImage, powerPortraitImageMask);
             saveBufferedImageInFile(attackPortraitImage, "images/Attacks/" + FilenameUtils.getBaseName(file.getName()) + "_p." + FilenameUtils.getExtension(file.getName()));
             saveBufferedImageInFile(skillPortraitImage, "images/Skills/" + FilenameUtils.getBaseName(file.getName()) + "_p." + FilenameUtils.getExtension(file.getName()));
             saveBufferedImageInFile(powerPortraitImage, "images/Powers/" + FilenameUtils.getBaseName(file.getName()) + "_p." + FilenameUtils.getExtension(file.getName()));
         }
 
-        BufferedImage attackImage = new BufferedImage(IMAGE_WIDTH, IMAGE_HEIGHT, BufferedImage.TYPE_INT_ARGB);
-        BufferedImage skillImage = new BufferedImage(IMAGE_WIDTH, IMAGE_HEIGHT, BufferedImage.TYPE_INT_ARGB);
-        BufferedImage powerImage = new BufferedImage(IMAGE_WIDTH, IMAGE_HEIGHT, BufferedImage.TYPE_INT_ARGB);
-
-        for (int i = 0; i < IMAGE_WIDTH; i++) {
-            for (int j = 0; j < IMAGE_HEIGHT; j++) {
-                setPixelAsTransparentOrCopyFromOriginal(cardImage, attackImage, attackImageMask, i, j);
-                setPixelAsTransparentOrCopyFromOriginal(cardImage, skillImage, skillImageMask, i, j);
-                setPixelAsTransparentOrCopyFromOriginal(cardImage, powerImage, powerImageMask, i, j);
-            }
-        }
+        BufferedImage attackImage = maskImage(cardImage, attackImageMask);
+        BufferedImage skillImage = maskImage(cardImage, skillImageMask);
+        BufferedImage powerImage = maskImage(cardImage, powerImageMask);
 
         saveBufferedImageInFile(attackImage, "images/Attacks/" + file.getName());
         saveBufferedImageInFile(skillImage, "images/Skills/" + file.getName());
         saveBufferedImageInFile(powerImage, "images/Powers/" + file.getName());
 
+    }
+
+    private float getImageRatio(BufferedImage originalImage) {
+        return (float) originalImage.getWidth() / (float) originalImage.getHeight();
+    }
+
+    private BufferedImage scaleImageDownToDimensions(BufferedImage originalImage, int newWidth, int newHeight) {
+        BufferedImage scaledImage = new BufferedImage(newWidth, newHeight, BufferedImage.TYPE_INT_ARGB);
+        AffineTransform transform = new AffineTransform();
+        transform.scale((float) newWidth / (float) originalImage.getWidth(),
+            (float) newHeight / (float) originalImage.getHeight());
+        AffineTransformOp scaleOp = new AffineTransformOp(transform, AffineTransformOp.TYPE_BILINEAR);
+        return scaleOp.filter(originalImage, scaledImage);
+    }
+
+    private BufferedImage maskImage(BufferedImage imageToMask, BufferedImage mask) {
+        BufferedImage outputImage = new BufferedImage(mask.getWidth(), mask.getHeight(), BufferedImage.TYPE_INT_ARGB);
+        for (int i = 0; i < mask.getWidth(); i++) {
+            for (int j = 0; j < mask.getHeight(); j++) {
+                setPixelAsTransparentOrCopyFromOriginal(imageToMask, outputImage, mask, i, j);
+            }
+        }
+        return outputImage;
     }
 
     private void saveBufferedImageInFile(BufferedImage bufferedImage, String filePath) throws IOException {
@@ -119,9 +103,15 @@ public class CardImagesCreator {
 
     private void setPixelAsTransparentOrCopyFromOriginal(BufferedImage originalImage, BufferedImage image, BufferedImage imageMask, int i, int j) {
         if (imageMask.getRGB(i, j) == Color.black.getRGB()) {
-            image.setRGB(i, j, transparentColor.getRGB());
+            image.setRGB(i, j, TRANSPARENT_COLOR.getRGB());
         } else {
             image.setRGB(i, j, originalImage.getRGB(i, j));
+        }
+    }
+
+    private static class WrongRatioException extends RuntimeException {
+        public WrongRatioException(String message) {
+            super(message);
         }
     }
 }
