@@ -11,6 +11,8 @@ import java.nio.file.Files;
 
 public class CardImagesCreator {
 
+    public static final int DOUBLE_PORTRAIT_IMAGE_WIDTH = 1000;
+    public static final int DOUBLE_PORTRAIT_IMAGE_HEIGHT = 760;
     public static final int PORTRAIT_IMAGE_WIDTH = 500;
     public static final int PORTRAIT_IMAGE_HEIGHT = 380;
     public static final int IMAGE_WIDTH = 250;
@@ -31,6 +33,11 @@ public class CardImagesCreator {
 
         BufferedImage originalImage = ImageIO.read(file);
 
+        boolean doublePortraitSize = false;
+        if (originalImage.getWidth() == DOUBLE_PORTRAIT_IMAGE_WIDTH && originalImage.getHeight() == DOUBLE_PORTRAIT_IMAGE_HEIGHT) {
+            doublePortraitSize = true;
+        }
+        
         boolean portraitSize = false;
         if ((originalImage.getWidth() == PORTRAIT_IMAGE_WIDTH && originalImage.getHeight() == PORTRAIT_IMAGE_HEIGHT)){
             portraitSize = true;
@@ -39,12 +46,25 @@ public class CardImagesCreator {
         if ((originalImage.getWidth() == IMAGE_WIDTH && originalImage.getHeight() == IMAGE_HEIGHT)){
             cardSize = true;
         }
-        if(!portraitSize && !cardSize) {
+        if(!doublePortraitSize && !portraitSize && !cardSize) {
             throw new IllegalArgumentException("Image has incorrect size.");
         }
 
         BufferedImage portraitImage;
         BufferedImage cardImage;
+        if(doublePortraitSize) {
+            BufferedImage scaledImage = new BufferedImage(PORTRAIT_IMAGE_WIDTH, PORTRAIT_IMAGE_HEIGHT, BufferedImage.TYPE_INT_ARGB);
+            Graphics g = scaledImage.createGraphics();
+            g.drawImage(originalImage, 0, 0, PORTRAIT_IMAGE_WIDTH, PORTRAIT_IMAGE_HEIGHT, null);
+            g.dispose();
+            portraitImage = scaledImage;
+            
+            BufferedImage scaledImage = new BufferedImage(IMAGE_WIDTH, IMAGE_HEIGHT, BufferedImage.TYPE_INT_ARGB);
+            Graphics g = scaledImage.createGraphics();
+            g.drawImage(originalImage, 0, 0, IMAGE_WIDTH, IMAGE_HEIGHT, null);
+            g.dispose();
+            cardImage = scaledImage;
+        }
         if(portraitSize) {
             BufferedImage scaledImage = new BufferedImage(IMAGE_WIDTH, IMAGE_HEIGHT, BufferedImage.TYPE_INT_ARGB);
             Graphics g = scaledImage.createGraphics();
