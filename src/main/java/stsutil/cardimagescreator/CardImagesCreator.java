@@ -59,13 +59,12 @@ public class CardImagesCreator {
             g.dispose();
             portraitImage = scaledImage;
             
-            BufferedImage scaledImage = new BufferedImage(IMAGE_WIDTH, IMAGE_HEIGHT, BufferedImage.TYPE_INT_ARGB);
-            Graphics g = scaledImage.createGraphics();
+            scaledImage = new BufferedImage(IMAGE_WIDTH, IMAGE_HEIGHT, BufferedImage.TYPE_INT_ARGB);
+            g = scaledImage.createGraphics();
             g.drawImage(originalImage, 0, 0, IMAGE_WIDTH, IMAGE_HEIGHT, null);
             g.dispose();
             cardImage = scaledImage;
-        }
-        if(portraitSize) {
+        } else if(portraitSize) {
             BufferedImage scaledImage = new BufferedImage(IMAGE_WIDTH, IMAGE_HEIGHT, BufferedImage.TYPE_INT_ARGB);
             Graphics g = scaledImage.createGraphics();
             g.drawImage(originalImage, 0, 0, IMAGE_WIDTH, IMAGE_HEIGHT, null);
